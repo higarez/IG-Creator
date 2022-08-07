@@ -2,9 +2,14 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import TimeoutException
 from selenium import webdriver
 from time import sleep
+from random import choice,randint
 import utils
+import os
 from selenium import *
 from fake_useragent import UserAgent
 import argparse
@@ -19,8 +24,24 @@ group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--firefox", action="store_true", help="Use Firefox - geckodriver")
 group.add_argument("--chrome", action="store_true", help = "Use Chrome - chromedriver")
 args = parser.parse_args()
+
+def GetRandomProxyForStream():
+        proxies_file = ReadFile(os.getcwd()+'/proxies.txt','r')
+        return choice(proxies_file)
+    
+def ReadFile(filename,method):
+        #f = open(filename,method)
+        #try:
+            #content = [line.strip('\n') for line in f]
+            #return content
+        #finally:    
+            #f.close() 
+        with open(filename,method) as f:
+            content = [line.strip('\n') for line in f]
+            return content
+
 try:
-        rounds = int(input(f'{y}[{b}?{y}]{g} how many accounts: '))
+        rounds = 100#int(input(f'{y}[{b}?{y}]{g} how many accounts: '))
 
 except:
         print(f'\n{r}[{b}!{r}]{r} Type a correct integer')
@@ -42,21 +63,54 @@ for i in range(rounds):
 
         if args.chrome:
                 try:
-                        chrome_driver_path = str(input(f'{y}[{b}?{y}]{g} A chrome driver path: '))
+                        #chrome_driver_path = str(input(f'{y}[{b}?{y}]{g} A chrome driver path: '))
                         from selenium.webdriver.chrome.options import Options
                         options = Options()
-                        options.add_argument(f'user-agent={userAgent}')
-                        driver = webdriver.Chrome(f'{chrome_driver_path}') # Put chrome driver path here!
+                        options.add_argument(f'user-agent={userAgent}') 
+                        
+                        #For ChromeDriver version 79.0.3945.16 or over
+                        #driver = webdriver.Chrome() # Put chrome driver path here!
                 except:
                         print(f'\n{r}[{b}!{r}]{r} Set a valid path')
                         break       
-        driver.get('https://www.instagram.com/accounts/emailsignup')
+                    
+                                     
+        #options.add_argument("--headless")
+        options.add_argument('--no-sandbox')
+        options.add_argument('--log-level=3')
+        options.add_argument('--lang=en')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument("--mute-audio")
+        options.add_argument('--disable-features=UserAgentClientHint')
+        options.add_argument("--disable-web-security")
+        options.add_experimental_option('excludeSwitches', ['enable-logging','enable-automation'])
+        options.add_experimental_option('useAutomationExtension', False)
+        options.add_experimental_option('prefs', {'intl.accept_languages': 'en_US,en'})
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        while True:
+            try:
+                #proxy='http://{0}'.format(GetRandomProxyForStream())
+                #print(proxy)
+                #options.add_argument('--proxy-server=http://{0}'.format(proxy))
+                driver = webdriver.Chrome(options=options)
+                driver.get('https://www.instagram.com/accounts/emailsignup')  
+                WebDriverWait(driver,10).until(EC.presence_of_element_located((By.XPATH,'/html/body/div[1]/section/main/div/div/div[1]/div[1]/div/img')))      
+                #                                                                       /html/body/div[3]/div/section/main/div/div/div[1]/div[1]/div/img
+                break
+            except:                           
+                continue
+            
+        
         driver.execute_script("window.open('');")
         driver.switch_to.window(driver.window_handles[1])
-        driver.get("https://10minutesemail.net/")
-        mail_address = driver.find_element_by_id('tempEmailAddress').get_attribute('value')
+        driver.get("https://www.moakt.com/en/inbox")
+        WebDriverWait(driver,15).until(EC.presence_of_element_located((By.XPATH,'/html/body/div[1]/div/div[2]/div/div/form/input[2]')))
+        WebDriverWait(driver,10).until(EC.element_to_be_clickable((By.XPATH,'/html/body/div[1]/div/div[2]/div/div/form/input[2]'))).click() 
+        WebDriverWait(driver,15).until(EC.presence_of_element_located((By.XPATH,'/html/body/div[1]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]')))   
+        mail_address = driver.find_element_by_id('email-address').text
+        print(mail_address)
         while mail_address == "Please wait...":
-                mail_address = driver.find_element_by_id('tempEmailAddress').get_attribute('value')
+                mail_address = driver.find_element_by_id('email-address').text
         else:
                 mail_address = mail_address
         driver.switch_to.window(driver.window_handles[0])
@@ -89,17 +143,21 @@ for i in range(rounds):
         # Fill password 
 
         password_field = driver.find_element_by_name('password')
+        sleep(0.5)
         password_field.send_keys(utils.generatePassword())  # You can determine another password here.
+        sleep(0.5)
         password = utils.generatePassword()
         sumbit = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//*[@id='react-root']/section/main/div/div/div[1]/div/form/div[7]/div/button"))).click()
+        #sleep(3)
         print('password: ' + password)
 
 
-        unavail_mess = ["A user with that username already exists.", "This username isn't available. Please try another."]
+        unavail_mess = ["username"]
         sleep(1.2)
         # New username if unavailable
         try :
                 unavailable_user = driver.find_element_by_xpath('/html/body/div[1]/section/main/div/div/div[1]/div[2]/form/div[8]/p').text
+                print(unavailable_user)
                 if unavailable_user in unavail_mess: 
 
                         print('username unavailable. Generating a new username...')
@@ -119,14 +177,14 @@ for i in range(rounds):
         sleep(1.2)
         print('')
         driver.find_element_by_xpath("//*[@id='react-root']/section/main/div/div/div[1]/div/div[4]/div/div/span/span[1]/select").click()
-        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//*[@id='react-root']/section/main/div/div/div[1]/div/div[4]/div/div/span/span[1]/select/option[4]"))).click()
+        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//*[@id='react-root']/section/main/div/div/div[1]/div/div[4]/div/div/span/span[1]/select/option["+str(randint(1,12))+"]"))).click()
 
         driver.find_element_by_xpath("//*[@id='react-root']/section/main/div/div/div[1]/div/div[4]/div/div/span/span[2]/select").click()
-        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//*[@id='react-root']/section/main/div/div/div[1]/div/div[4]/div/div/span/span[2]/select/option[10]"))).click()
+        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//*[@id='react-root']/section/main/div/div/div[1]/div/div[4]/div/div/span/span[2]/select/option["+str(randint(1,28))+"]"))).click()
 
         driver.find_element_by_xpath("//*[@id='react-root']/section/main/div/div/div[1]/div/div[4]/div/div/span/span[3]/select").click()
-        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//*[@id='react-root']/section/main/div/div/div[1]/div/div[4]/div/div/span/span[3]/select/option[27]"))).click()
-
+        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//*[@id='react-root']/section/main/div/div/div[1]/div/div[4]/div/div/span/span[3]/select/option["+str(randint(18,45))+"]"))).click()
+        
         WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//*[@id='react-root']/section/main/div/div/div[1]/div/div[6]/button"))).click()
         sleep(0.5)
 
@@ -135,12 +193,20 @@ for i in range(rounds):
 
         print("Waiting for the verification code...")
         driver.switch_to.window(driver.window_handles[1])
-        sleep(13)
-
-        invalid_code = ['If you receive any email, it will be shown in here!']
-        while driver.find_element_by_xpath('/html/body/main/div[3]/div/div[1]/div/div[2]/div/table/tbody/tr/td[2]').text in invalid_code:
-                code = driver.find_element_by_xpath('/html/body/main/div[3]/div/div[1]/div/div[2]/div/table/tbody/tr/td[2]').text                
-        else:
+        sleep(5)
+        
+        invalid_code = ['No messages in your inbox at the moment. You Can refresh the page to check again.']
+        invalid_now = driver.find_element(By.XPATH,"/html/body/div[1]/div[1]/div[2]/div[2]/div[2]/div[2]/div/table/tbody/tr[2]/td").text
+        #/html/body/div[1]/div[1]/div[2]/div[2]/div[2]/div[2]/div/table/tbody/tr[2]/td[1]
+        #print(invalid_now)
+        while invalid_now in invalid_code:
+                #/html/body/div[1]/div[1]/div[2]/div[2]/div[2]/div[1]/a[2]/label
+                invalid_now = driver.find_element(By.XPATH,"/html/body/div[1]/div[1]/div[2]/div[2]/div[2]/div[2]/div/table/tbody/tr[2]/td").text
+                WebDriverWait(driver,10).until(EC.element_to_be_clickable((By.XPATH,'/html/body/div[1]/div[1]/div[2]/div[2]/div[2]/div[1]/a[2]/label'))).click() 
+                print("Refresh Mail List")
+                sleep(5)
+        else:                
+                code = driver.find_element(By.XPATH,"/html/body/div[1]/div[1]/div[2]/div[2]/div[2]/div[2]/div/table/tbody/tr[2]/td[1]/a").text
                 code = code[:6]
                 print("Confirmation Code is: "+ code)
 
@@ -148,10 +214,24 @@ for i in range(rounds):
 
         # Security code  
         driver.find_element_by_name('email_confirmation_code').send_keys(code, Keys.ENTER)
-        sleep(5)
-
+        sleep(20)
+        
+        invalid_code = ['Sorry, something went wrong creating your account. Please try again soon.']
+        invalid_now = driver.find_element(By.XPATH,"/html/body/div[1]/section/main/div/div/div[1]/div[2]/form/div/div[4]/div").text
+        print(invalid_now)
+        
+        while invalid_now in invalid_code:
+                print("deneniyor")
+                #/html/body/div[1]/div[1]/div[2]/div[2]/div[2]/div[1]/a[2]/label
+                invalid_now = driver.find_element(By.XPATH,"/html/body/div[1]/section/main/div/div/div[1]/div[2]/form/div/div[4]/div").text
+                WebDriverWait(driver,10).until(EC.element_to_be_clickable((By.XPATH,'/html/body/div[1]/section/main/div/div/div[1]/div[2]/form/div/div[2]/button'))).click()                 
+                sleep(5)
+        else:                
+                break
+                
         try:
                 not_valid = driver.find_element_by_xpath('/html/body/div[1]/section/main/div/div/div[1]/div[2]/form/div/div[4]/div')
+                #/html/body/div[1]/section/main/div/div/div[1]/div[2]/form/div/div[4]/div
                 if not_valid.text == 'That code isn\'t valid. You can request a new one.' :
 
                         sleep(1)
